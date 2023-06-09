@@ -1,0 +1,53 @@
+#include<Servo.h>
+#include<PID_v1.h>
+#include<SoftwareSerial.h>
+#include <SharpIR.h>
+
+int set=13,neg=-26,pos=26;//Setpoint,Negative,Positive,Base values.neg shows tilt on other side of ultrasonic sensor
+double base = 110;
+const double a=0.2;               //Exponential filter parameter
+const int servoPin = 9;           //Servo pin
+  
+float Kp = 0.4;                                                    //Initial Proportional Gain 
+float Ki = 0.02;                                                      //Initial Integral Gain 
+float Kd = 0.45;                                                    //Intitial Derivative Gain 
+double Setpoint, Input, Output, ServoOutput;                                       
+double error;
+
+PID myPID(&Input, &Output, &Setpoint, Kp, Ki, Kd, REVERSE);           //Initialize PID object, which is in the class PID.
+                                                                                                                                                                                                                                                                         
+Servo myServo;                                                       //Initialize Servo.
+
+void setup() {
+  Serial.begin(9600);                                                //Begin Serial 
+  myServo.attach(servoPin);                                          //Attach Servo
+ 
+  Input =  SharpIR(A0, 1080).distance();                                     
+                                                                     //  position as the input to the PID algorithm
+  myPID.SetMode(AUTOMATIC);                                         //Set PID object myPID to AUTOMATIC 
+  myPID.SetOutputLimits(neg,pos);                                   //Set Output limits to neg and pos degrees. 
+}
+
+void loop()
+{
+  Setpoint = set;                                                      //Give value for setpoint
+  Input =  SharpIR(A0, 1080).distance();                                         
+  Serial.println(Input);
+
+  myPID.Compute();           //computes Output in range of neg to pos degrees
+  
+  error = Setpoint - Input;
+
+  if (Input < 11) {
+    base -= 0.1;    
+  }   
+
+  if (Input > 13) {
+    base += 0.1;
+  } 
+
+  delay(40);
+  ServoOutput=base+Output;                                        
+  myServo.write(ServoOutput);                                        //Writes value of Output to servo
+}
+     
